@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 
+void handle_sys_read(pid_t pid_child, int *in_syscall);
 void handle_sys_write(pid_t pid_child, int *in_syscall);
 void handle_sys_open(pid_t pid_child, int *in_syscall);
 void handle_sys_close(pid_t pid_child, int *in_syscall);

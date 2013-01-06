@@ -33,6 +33,10 @@ void print_syscall_info(pid_t pid_child, int *in_syscall) {
     syscall = ptrace(PTRACE_PEEKUSER, pid_child, OFFSET * ORIG_EAX, NULL);
 
     switch(syscall) {
+
+        case SYS_read:
+            handle_sys_read(pid_child, in_syscall);
+        break;        
         
         case SYS_write:
             handle_sys_write(pid_child, in_syscall);

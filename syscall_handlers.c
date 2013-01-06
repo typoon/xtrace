@@ -12,41 +12,95 @@
 #include "utils.h"
 #include "log.h"
 
-void handle_sys_exceve(pid_t pid_child, int *in_syscall) {
 
-    long r_eip;
-    data_u d;
 
+void handle_sys_read(pid_t pid_child, int *in_syscall) {
+
+    int c = 1;
+    long i;
+
+    char *output;
+    char *str_time;
+
+    long r_fd;
+    long r_buf;
+    long r_count;
+    long r_ret;
+
+    char bin_data_path[255];
+    char ascii_data_path[255];
+    FILE *f_bin_data;
+    FILE *f_ascii_data;
+
+    memset(bin_data_path,   0, sizeof(bin_data_path));
+    memset(ascii_data_path, 0, sizeof(ascii_data_path));
+
+    sprintf(bin_data_path,   "%s/read-bin-%d",   log_dir, pid_child);
+    sprintf(ascii_data_path, "%s/read-ascii-%d", log_dir, pid_child);
+
+    f_bin_data   = fopen(bin_data_path,   "a");
+    f_ascii_data = fopen(ascii_data_path, "a");
+
+    str_time = get_full_time();
+    
     if(*in_syscall == -1) {
-        //*in_syscall = SYS_execve;
+        *in_syscall = SYS_read;
 
-        r_eip = ptrace(PTRACE_PEEKUSER, pid_child, EIP * OFFSET, NULL);
-        printf("r_eip = %08x", (unsigned int)r_eip);
+        r_fd    = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG1, NULL);
+        r_buf   = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG2, NULL);
+        r_count = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG3, NULL);
 
-        int i = 0;
-        for(i = 0; i < 4; i++) {
-            d.val = ptrace(PTRACE_PEEKDATA, pid_child, r_eip + (i * OFFSET), NULL);
-            printf("%02X ", (unsigned char)d.data[0]);
-            printf("%02X ", (unsigned char)d.data[1]);
-            printf("%02X ", (unsigned char)d.data[2]);
-            printf("%02X ", (unsigned char)d.data[3]);
-            printf("%02X ", (unsigned char)d.data[4]);
-            printf("%02X ", (unsigned char)d.data[5]);
-            printf("%02X ", (unsigned char)d.data[6]);
-            printf("%02X", (unsigned char)d.data[7]);
-            
-        }
+        do_log_time(str_time, "read(%ld, %lX, %ld);", r_fd, r_buf, r_count);
+        do_log_time_pad(str_time, 4, "fd (%ld) = %s", r_fd, simple_map_get(open_fds, r_fd));
         
     } else {
-        //*in_syscall = -1;
+        *in_syscall = -1;
+
+        r_buf   = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG2, NULL);
+        r_count = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG3, NULL);
+        r_ret = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_RET, NULL);
+
+        read_bin_data(pid_child, r_buf, &output, r_count);
+
+        fprintf(f_bin_data,   "---- Start - %s (%ld bytes) ----\n", str_time, r_ret);
+        fprintf(f_ascii_data, "---- Start - %s (%ld bytes) ----\n", str_time, r_ret);
+
+        if(r_ret <= 0) {
+            fprintf(f_bin_data,   "Read returned %ld, no data has been read", r_ret);
+            fprintf(f_ascii_data, "Read returned %ld, no data has been read", r_ret);
+        }
+
+        for(i = 0; i < r_ret; i++) {
+            fprintf(f_bin_data, "%02X", (unsigned char)output[i]);
+            
+            if((c % 16) == 0) {
+                fprintf(f_bin_data, "\n");
+                c = 1;
+            } else {
+                fprintf(f_bin_data, " ");
+                c++;
+            }
+            
+            fwrite(&output[i], 1, 1, f_ascii_data);
+        }
+
+        fprintf(f_bin_data,   "\n---- End   - %s (%ld bytes) ----\n\n", str_time, r_ret);
+        fprintf(f_ascii_data, "\n---- End   - %s (%ld bytes) ----\n\n", str_time, r_ret);
+        
+        do_log_time_pad(str_time, 4, "buf (0x%lX) = Check files %s and %s", r_buf, ascii_data_path, bin_data_path);
+        free(output);
+        
+        do_log_time_pad(str_time, 4, "read returned: %ld", r_ret);
     }
-    
+
+    fclose(f_bin_data);
+    fclose(f_ascii_data);
+    free(str_time);
 }
 
 void handle_sys_write(pid_t pid_child, int *in_syscall) {
 
     int c = 1;
-
     long i;
 
     char *output;
@@ -88,7 +142,7 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
         fprintf(f_ascii_data, "---- Start - %s (%ld bytes) ----\n", str_time, r_count);
 
         for(i = 0; i < r_count; i++) {
-            fprintf(f_bin_data, "%02X", output[i]);
+            fprintf(f_bin_data, "%02X", (unsigned char)output[i]);
             
             if((c % 16) == 0) {
                 fprintf(f_bin_data, "\n");
@@ -343,4 +397,35 @@ void handle_sys_close(pid_t pid_child, int *in_syscall) {
         simple_map_rem(open_fds, r_fd);
     }
 
+}
+
+void handle_sys_exceve(pid_t pid_child, int *in_syscall) {
+
+    long r_eip;
+    data_u d;
+
+    if(*in_syscall == -1) {
+        //*in_syscall = SYS_execve;
+
+        r_eip = ptrace(PTRACE_PEEKUSER, pid_child, EIP * OFFSET, NULL);
+        printf("r_eip = %08x", (unsigned int)r_eip);
+
+        int i = 0;
+        for(i = 0; i < 4; i++) {
+            d.val = ptrace(PTRACE_PEEKDATA, pid_child, r_eip + (i * OFFSET), NULL);
+            printf("%02X ", (unsigned char)d.data[0]);
+            printf("%02X ", (unsigned char)d.data[1]);
+            printf("%02X ", (unsigned char)d.data[2]);
+            printf("%02X ", (unsigned char)d.data[3]);
+            printf("%02X ", (unsigned char)d.data[4]);
+            printf("%02X ", (unsigned char)d.data[5]);
+            printf("%02X ", (unsigned char)d.data[6]);
+            printf("%02X", (unsigned char)d.data[7]);
+            
+        }
+        
+    } else {
+        //*in_syscall = -1;
+    }
+    
 }
