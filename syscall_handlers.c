@@ -84,6 +84,7 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
         //read_bin_data(pid_child, r_buf, &output, r_count);
 
         output = (char *)malloc(r_count);
+        memset(output, 0, r_count);
 
         for(i = 0; i < r_count; i++) {
             fprintf(f_bin_data, "%02X", output[i]);
