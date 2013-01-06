@@ -77,6 +77,8 @@ int simple_map_key_exists(simple_map *map, int k) {
         if(data->key == k) {
             return 1;
         }
+
+        data = data->next;
     }
 
     return 0;

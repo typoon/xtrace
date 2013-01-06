@@ -86,6 +86,9 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
         output = (char *)malloc(r_count);
         memset(output, 0, r_count);
 
+        fprintf(f_bin_data, "---- Start - %s ----\n", str_time);
+        fprintf(f_ascii_data, "---- Start - %s ----\n", str_time);
+
         for(i = 0; i < r_count; i++) {
             fprintf(f_bin_data, "%02X", output[i]);
             
@@ -99,6 +102,9 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
             
             fwrite(&output[i], 1, 1, f_ascii_data);
         }
+
+        fprintf(f_bin_data, "\n---- End   - %s ----\n", str_time);
+        fprintf(f_ascii_data, "\n---- End   - %s ----\n", str_time);
         
         do_log_time(str_time, "\tbuf (0x%lx) = Check files %s and %s", ascii_data_path, bin_data_path);
         free(output);

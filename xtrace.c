@@ -39,7 +39,7 @@ void print_syscall_info(pid_t pid_child, int *in_syscall) {
         break;
 
         case SYS_open:
-            handle_sys_open(pid_child, in_syscall);
+            //handle_sys_open(pid_child, in_syscall);
         break;
 
         case SYS_execve:
