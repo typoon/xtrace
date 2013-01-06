@@ -62,13 +62,13 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
     FILE *f_bin_data;
     FILE *f_ascii_data;
 
-    memset(bin_data_path, 0, sizeof(bin_data_path));
+    memset(bin_data_path,   0, sizeof(bin_data_path));
     memset(ascii_data_path, 0, sizeof(ascii_data_path));
 
-    sprintf(bin_data_path, "%s/write-bin-%d", log_dir, pid_child);
+    sprintf(bin_data_path,   "%s/write-bin-%d",   log_dir, pid_child);
     sprintf(ascii_data_path, "%s/write-ascii-%d", log_dir, pid_child);
 
-    f_bin_data = fopen(bin_data_path, "a");
+    f_bin_data   = fopen(bin_data_path,   "a");
     f_ascii_data = fopen(ascii_data_path, "a");
 
     str_time = get_full_time();
@@ -76,17 +76,18 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
     if(*in_syscall == -1) {
         *in_syscall = SYS_write;
 
-        r_fd = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG1, NULL);
-        r_buf = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG2, NULL);
+        r_fd    = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG1, NULL);
+        r_buf   = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG2, NULL);
         r_count = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG3, NULL);
 
         do_log_time(str_time, "write(%ld, 0x%lX, %ld);", r_fd, r_buf, r_count);
+        
         //read_bin_data(pid_child, r_buf, &output, r_count);
 
         output = (char *)malloc(r_count);
         memset(output, 0, r_count);
 
-        fprintf(f_bin_data, "---- Start - %s ----\n", str_time);
+        fprintf(f_bin_data,   "---- Start - %s ----\n", str_time);
         fprintf(f_ascii_data, "---- Start - %s ----\n", str_time);
 
         for(i = 0; i < r_count; i++) {
@@ -103,10 +104,10 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
             fwrite(&output[i], 1, 1, f_ascii_data);
         }
 
-        fprintf(f_bin_data, "\n---- End   - %s ----\n", str_time);
+        fprintf(f_bin_data,   "\n---- End   - %s ----\n", str_time);
         fprintf(f_ascii_data, "\n---- End   - %s ----\n", str_time);
         
-        do_log_time(str_time, "\tbuf (0x%lx) = Check files %s and %s", ascii_data_path, bin_data_path);
+        do_log_time(str_time, "\tbuf (0x%lX) = Check files %s and %s", r_buf, ascii_data_path, bin_data_path);
         free(output);
         
     } else {

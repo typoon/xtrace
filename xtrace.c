@@ -43,7 +43,7 @@ void print_syscall_info(pid_t pid_child, int *in_syscall) {
         break;
 
         case SYS_execve:
-            handle_sys_exceve(pid_child, in_syscall);
+            //handle_sys_exceve(pid_child, in_syscall);
             // Gotta ask the user if he wants this syscall to execute or not
         break;
 
