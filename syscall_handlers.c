@@ -81,7 +81,9 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
         r_count = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG3, NULL);
 
         do_log_time(str_time, "write(%ld, 0x%lX, %ld);", r_fd, r_buf, r_count);
-        read_bin_data(pid_child, r_buf, &output, r_count);
+        //read_bin_data(pid_child, r_buf, &output, r_count);
+
+        output = (char *)malloc(r_count);
 
         for(i = 0; i < r_count; i++) {
             fprintf(f_bin_data, "%02X", output[i]);
@@ -107,6 +109,8 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
         do_log_time(str_time, "\twrite returned: %ld", r_ret);
     }
 
+    fclose(f_bin_data);
+    fclose(f_ascii_data);
     free(str_time);
 }
 

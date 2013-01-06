@@ -35,6 +35,13 @@ void read_ascii_data(pid_t pid_child, long from, char **buf) {
     if(size != -1) {
         *buf = (char *)malloc(sizeof(char) * size);
 
+        for(i = 0; i < size ; i++) {
+            d.val = ptrace(PTRACE_PEEKDATA, pid_child, from + i, NULL);
+            //(*buf)[i] = d.data[0];
+            memcpy(&((*buf)[i]), d.data, 1);
+        }
+
+        /*
         for(i = 0, j = 0; ; i++) {
             d.val = ptrace(PTRACE_PEEKDATA, pid_child, from + (i * OFFSET), NULL);
             memcpy(&((*buf)[j]), d.data, OFFSET);
@@ -43,6 +50,7 @@ void read_ascii_data(pid_t pid_child, long from, char **buf) {
             if(j >= size)
                 break;
         }
+        */
     }
 }
 
