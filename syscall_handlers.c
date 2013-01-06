@@ -82,13 +82,10 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
 
         do_log_time(str_time, "write(%ld, 0x%lX, %ld);", r_fd, r_buf, r_count);
         
-        //read_bin_data(pid_child, r_buf, &output, r_count);
+        read_bin_data(pid_child, r_buf, &output, r_count);
 
-        output = (char *)malloc(r_count);
-        memset(output, 0, r_count);
-
-        fprintf(f_bin_data,   "---- Start - %s ----\n", str_time);
-        fprintf(f_ascii_data, "---- Start - %s ----\n", str_time);
+        fprintf(f_bin_data,   "---- Start - %s (%ld bytes) ----\n", str_time, r_count);
+        fprintf(f_ascii_data, "---- Start - %s (%ld bytes) ----\n", str_time, r_count);
 
         for(i = 0; i < r_count; i++) {
             fprintf(f_bin_data, "%02X", output[i]);
@@ -104,17 +101,17 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
             fwrite(&output[i], 1, 1, f_ascii_data);
         }
 
-        fprintf(f_bin_data,   "\n---- End   - %s ----\n", str_time);
-        fprintf(f_ascii_data, "\n---- End   - %s ----\n", str_time);
+        fprintf(f_bin_data,   "\n---- End   - %s (%ld bytes) ----\n\n", str_time, r_count);
+        fprintf(f_ascii_data, "\n---- End   - %s (%ld bytes) ----\n\n", str_time, r_count);
         
-        do_log_time(str_time, "\tbuf (0x%lX) = Check files %s and %s", r_buf, ascii_data_path, bin_data_path);
+        do_log_time_pad(str_time, 4, "buf (0x%lX) = Check files %s and %s", r_buf, ascii_data_path, bin_data_path);
         free(output);
         
     } else {
         *in_syscall = -1;
 
         r_ret = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_RET, NULL);
-        do_log_time(str_time, "\twrite returned: %ld", r_ret);
+        do_log_time_pad(str_time, 4, "write returned: %ld", r_ret);
     }
 
     fclose(f_bin_data);
@@ -124,14 +121,16 @@ void handle_sys_write(pid_t pid_child, int *in_syscall) {
 
 void handle_sys_open(pid_t pid_child, int *in_syscall) {
 
-    char *pathname = NULL;
-
     long r_pathname;
     long r_flags;
     long r_mode;
     long r_ret;
 
     char sep = ' ';
+    char flags[512];
+    char *pathname = NULL;
+
+    memset(flags, 0, sizeof(flags));
 
     if(*in_syscall == -1) {
         *in_syscall = SYS_open;
@@ -149,43 +148,43 @@ void handle_sys_open(pid_t pid_child, int *in_syscall) {
         read_ascii_data(pid_child, r_pathname, &pathname);
         
         if(pathname != NULL) {
-            do_log("\tpathname (0x%lX) = %s", r_pathname, pathname);
+            do_log_pad(4, "pathname (0x%lX) = %s", r_pathname, pathname);
             free(pathname);
         }
 
-        do_log("\tflags (%ld) =", r_flags);
+
         if((r_flags & O_RDONLY) == O_RDONLY) {
-            do_log("%c O_RDONLY ", sep);
+            sprintf(flags, "%s %c O_RDONLY", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_WRONLY) == O_WRONLY) {
-            do_log("%c O_WRONLY ", sep);
+            sprintf(flags, "%s %c O_WRONLY", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_RDWR) == O_RDWR) {
-            do_log("%c O_RDWR ", sep);
+            sprintf(flags, "%s %c O_RDRW", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_APPEND) == O_APPEND) {
-            do_log("%c O_APPEND ", sep);
+            sprintf(flags, "%s %c O_APPEND", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_ASYNC) == O_ASYNC) {
-            do_log("%c O_ASYNC ", sep);
+            sprintf(flags, "%s %c O_ASYNC", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_CLOEXEC) == O_CLOEXEC) {
-            do_log("%c O_CLOEXEC ", sep);
+            sprintf(flags, "%s %c O_CLOEXEC", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_CREAT) == O_CREAT) {
-            do_log("%c O_CREAT ", sep);
+            sprintf(flags, "%s %c O_CREAT", flags, sep);
             sep = '|';
         }
 
@@ -197,12 +196,12 @@ void handle_sys_open(pid_t pid_child, int *in_syscall) {
         */
 
         if((r_flags & O_DIRECTORY) == O_DIRECTORY) {
-            do_log("%c O_DIRECTORY ", sep);
+            sprintf(flags, "%s %c O_DIRECTORY", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_EXCL) == O_EXCL) {
-            do_log("%c O_EXCL ", sep);
+            sprintf(flags, "%s %c O_EXECL", flags, sep);
             sep = '|';
         }
 
@@ -219,29 +218,31 @@ void handle_sys_open(pid_t pid_child, int *in_syscall) {
         */
 
         if((r_flags & O_NOCTTY) == O_NOCTTY) {
-            do_log("%c O_NOCTTY ", sep);
+            sprintf(flags, "%s %c O_NOCTTY", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_NOFOLLOW) == O_NOFOLLOW) {
-            do_log("%c O_NOFOLLOW ", sep);
+            sprintf(flags, "%s %c O_NOFOLLOW", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_NONBLOCK) == O_NONBLOCK) {
-            do_log("%c O_NONBLOCK ", sep);
+            sprintf(flags, "%s %c O_NONBLOCK", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_SYNC) == O_SYNC) {
-            do_log("%c O_SYNC ", sep);
+            sprintf(flags, "%s %c O_SYNC", flags, sep);
             sep = '|';
         }
 
         if((r_flags & O_TRUNC) == O_TRUNC) {
-            do_log("%c O_TRUNC ", sep);
+            sprintf(flags, "%s %c O_TRUNC", flags, sep);
             sep = '|';
         }
+
+        do_log_pad(4, "flags (%ld) = %s", r_flags, flags);
 
 
         if((r_flags & O_CREAT) == O_CREAT) {
@@ -313,7 +314,7 @@ void handle_sys_open(pid_t pid_child, int *in_syscall) {
     } else {
         *in_syscall = -1;
         r_ret = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_RET, NULL);
-        do_log("\topen returned: %ld", r_ret);
+        do_log_pad(4, "open returned: %ld", r_ret);
 
         if(r_ret > 0) {
             r_pathname = ptrace(PTRACE_PEEKUSER, pid_child, SYSCALL_ARG1, NULL);
